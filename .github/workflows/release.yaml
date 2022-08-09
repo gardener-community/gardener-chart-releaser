@@ -15,3 +15,4 @@ jobs:
         goarch: amd64
         goversion: 1.18
         binary_name: gardener-chart-releaser
+        compress_assets: false
