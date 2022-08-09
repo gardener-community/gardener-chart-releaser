@@ -36,7 +36,7 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 	// Therefore, just use a system command here
 	tempDir := "tmp"
 
-	_, err = exec.Command("cp", "-Lr", tempRepoDir+src, tempDir).Output()
+	_, err = exec.Command("cp", "-LR", tempRepoDir+src, tempDir).Output()
 	if err != nil {
 		fmt.Println(err)
 	}

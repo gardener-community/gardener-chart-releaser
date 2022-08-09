@@ -53,7 +53,7 @@ func UpdateReleases(config Configuration, targetDir string, ghToken string)  {
 	}
 
 	// make sure the working dir is a git repository
-	exec.Command("cp", "-r", "destrepo/.git", "./").Run()
+	exec.Command("cp", "-R", "destrepo/.git", "./").Run()
 
 
 	// get a *github.Client	for the github token
