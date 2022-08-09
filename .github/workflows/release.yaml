@@ -11,8 +11,11 @@ jobs:
     - uses: wangyoucao577/go-release-action@v1.30
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        goos: linux
-        goarch: amd64
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+        exclude:
+          - goarch: arm64
+            goos: windows
         goversion: 1.18
         binary_name: gardener-chart-releaser
         compress_assets: false
