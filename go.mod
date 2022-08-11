@@ -3,20 +3,22 @@ module github.com/gardener-community/gardener-chart-releaser
 go 1.18
 
 // replace the chartutil with a local copy, as we want to use our custom SaveDir-function
-// replace helm.sh/helm/v3 v3.9.0 => ./helm.sh/helm/v3
+replace helm.sh/helm/v3 v3.9.3 => github.com/23technologies/helm/v3 v3.9.3-saveDirPatch
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/akrennmair/slice v0.0.0-20220105203817-49445747ab81
-	github.com/go-git/go-git v4.7.0+incompatible
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/google/go-github/v36 v36.0.0
 	github.com/helm/chart-releaser v1.4.0
+	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.5.0
+	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.12.0
+	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
 	gopkg.in/yaml.v2 v2.4.0
-	helm.sh/helm/v3 v3.9.2
+	helm.sh/helm/v3 v3.9.3
 )
 
 require (
@@ -39,9 +41,9 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/emicklei/go-restful v2.9.5+incompatible // indirect
+	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
-	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
+	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
@@ -88,7 +90,6 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
@@ -98,9 +99,7 @@ require (
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/src-d/gcfg v1.4.0 // indirect
-	github.com/stretchr/testify v1.7.2 // indirect
+	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/subosito/gotenv v1.3.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
@@ -110,7 +109,6 @@ require (
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e // indirect
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2 // indirect
-	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5 // indirect
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
@@ -122,8 +120,6 @@ require (
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
-	gopkg.in/src-d/go-billy.v4 v4.3.2 // indirect
-	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.24.2 // indirect
@@ -132,7 +128,7 @@ require (
 	k8s.io/cli-runtime v0.24.2 // indirect
 	k8s.io/client-go v0.24.2 // indirect
 	k8s.io/klog/v2 v2.60.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20220328201542-3ee0da9b0b42 // indirect
+	k8s.io/kube-openapi v0.0.0-20220627174259-011e075b9cb8 // indirect
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9 // indirect
 	oras.land/oras-go v1.2.0 // indirect
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
