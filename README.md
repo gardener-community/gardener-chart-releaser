@@ -7,15 +7,14 @@ In this repo, the code for a Gardener chart releaser is provided and maintained.
 First, please checkout the config.yaml file as a starting point. The overall structure is as follows:
 ``` yaml
 destination:
-  owner: gardener-community
-  repo: gardener-charts
-
+    owner: gardener-community
+    repo: gardener-charts
 sources:
-  - name: "gardener-controlplane"
-    repo: "gardener/gardener"
-    version: "v1.51.0"
-    charts:
-      - "charts/gardener/controlplane"
+    - name: gardener-controlplane
+      version: v1.53.0
+      repo: gardener/gardener
+      charts:
+        - charts/gardener/controlplane
   - ...
 ```
 `sources` defines a list with "upstream" charts to collect, and `destination` defines a repository (hosted on GitHub) serving as a helm repository where the charts are released.
