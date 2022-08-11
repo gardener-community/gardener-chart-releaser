@@ -106,3 +106,22 @@ func UpdateReleases(config Configuration, targetDir string, ghToken string)  {
 	exec.Command("rm", "-rf", ".git").Run()
 
 }
+
+// ExportCharts Exports the configured charts to a directory
+func ExportCharts(config Configuration, targetDir string, ghToken string)  {
+
+	// get a *github.Client	for the github token
+	// this client will be used for interacting with the github api
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: ghToken},
+	)
+	tokenClient := oauth2.NewClient(context.Background(), ts)
+	client := github.NewClient(tokenClient)
+
+	// main loop over all items in the config file
+	for _, cfg := range config.SrcCfg {
+			topLevelChart := getTopLevelChart(cfg, client)
+			chartutil.SaveDir(&topLevelChart, targetDir)
+	}
+
+}

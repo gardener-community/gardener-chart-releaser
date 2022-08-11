@@ -5,36 +5,34 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/gardener-community/gardener-chart-releaser/pkg/releaser"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // exportCmd represents the export command
 var exportCmd = &cobra.Command{
 	Use:   "export",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Exports charts to a directory (requires GITHUB_TOKEN)",
+	Long:  `This is a utility command which can be used for generating
+a local development version of the charts. Once exported the charts
+can be modified and tested. If you feel confident that your changes
+also make sense for others you can go ahead and file pull requests in
+the corresponding upstream repository.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+This command requires the environmet variable GITHUB_TOKEN to be set.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("export called")
+
+		config := releaser.Configuration{}
+		viper.Unmarshal(&config)
+		ghToken := viper.GetString("GITHUB_TOKEN")
+		targetDir := viper.GetString("targetDir")
+
+		releaser.ExportCharts(config, targetDir, ghToken)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(exportCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// exportCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// exportCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	exportCmd.Flags().String("targetDir", "charts", "The directory where charts are stored locally")
 }
