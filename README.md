@@ -1,5 +1,5 @@
 # Gardener Chart releaser
-In this repo, the code for a Gardener chart releaser is provided and maintained.
+In this repo, the code for a Gardener chart releaser is provided and maintained. This software aims at collecting and releasing charts required for Gardener provisioning, so that they can be accessed at one single point of truth. Releases are published on GitHub and a corresponding helm repository is configured via GitHub pages. Consequently, working with the released charts is as simple as it could be. Note that only the software itself is maintained here. The releases are/can be published in various other repositories (you could also setup your own, if you like).
 
 # Getting Started
 
