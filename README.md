@@ -20,6 +20,20 @@ sources:
 ```
 `sources` defines a list with "upstream" charts to collect, and `destination` defines a repository (hosted on GitHub) serving as a helm repository where the charts are released.
 
+## Export charts locally
+If you want to export the configured charts to a local directory for development purposes, gardener-chart-releaser can do it for you. Simply run
+```shell
+go run main.go export
+```
+and find a `charts` directory containing the configured charts. Now, you can develop (with) these charts.
+
+## Update the versions defined in config.yaml
+You can simply update the versions in config.yaml to the latest version available upstream by
+```shell
+go run main.go fetchLatestVersions
+```
+This is useful in combination with exporting the charts to a local directory. If you fetch the lastest versions before, the charts in the local directory will also match the latest version.
+
 ## Further help
 You can get further help by running the help commands implemented by the program. For instance,
 ```shell
