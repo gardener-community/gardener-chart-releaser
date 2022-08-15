@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"log"
 	"strings"
 
 	"github.com/gardener-community/gardener-chart-releaser/pkg/releaser"
@@ -24,6 +25,9 @@ export the most recent version.
 		config := releaser.Configuration{}
 		viper.Unmarshal(&config)
 		ghToken := viper.GetString("GITHUB_TOKEN")
+		if ghToken == "" {
+			log.Fatal("GITHUB_TOKEN is empty")
+		}
 
 		// get a *github.Client	for the github token
 		// this client will be used for interacting with the github api
@@ -37,7 +41,10 @@ export the most recent version.
 		for i, cfg := range config.SrcCfg {
 			owner := strings.Split(cfg.Repo, "/")[0]
 			repo := strings.Split(cfg.Repo, "/")[1]
-			latestRelease, _, _ := client.Repositories.GetLatestRelease(context.Background(), owner, repo)
+			latestRelease, _, err := client.Repositories.GetLatestRelease(context.Background(), owner, repo)
+			if err != nil {
+				log.Fatal(err)
+			}
 			config.SrcCfg[i].Version = *latestRelease.TagName
 		}
 		viper.Set("sources", config.SrcCfg)
