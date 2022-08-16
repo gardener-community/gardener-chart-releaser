@@ -2,11 +2,11 @@ destination:
     owner: gardener-community
     repo: gardener-charts
 sources:
-    - name: gardener-kube-apiserver
+    - name: garden-kube-apiserver
       version: v1.24.3
-      repo: gardener-community/gardener-kube-apiserver
+      repo: gardener-community/garden-kube-apiserver
       charts:
-        - charts/gardener-kube-apiserver
+        - charts/garden-kube-apiserver
     - name: gardener-controlplane
       version: v1.53.0
       repo: gardener/gardener
