@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-
 func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *github.Client) ([]*semver.Version, error) {
 
 	owner := strings.Split(cfg.Repo, "/")[0]
@@ -41,7 +40,12 @@ func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *gith
 	sort.Sort(semver.Collection(upstreamReleaseVersions))
 
 	maxMinor := upstreamReleaseVersions[len(upstreamReleaseVersions)-1].Minor()
-	maxMinorMinus3 := maxMinor - 3
+	var maxMinorMinus3 uint64
+	if maxMinor <= 3 {
+		maxMinorMinus3 = 0
+	} else {
+		maxMinorMinus3 = maxMinor - 3
+	}
 
 	upstreamReleaseVersions = slice.Filter(upstreamReleaseVersions, (func(v *semver.Version) bool { return v.Minor() >= maxMinorMinus3 }))
 

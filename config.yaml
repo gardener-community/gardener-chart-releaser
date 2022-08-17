@@ -3,7 +3,7 @@ destination:
     repo: gardener-charts
 sources:
     - name: garden-kube-apiserver
-      version: v1.24.3
+      version: v1.0.0
       repo: gardener-community/garden-kube-apiserver
       charts:
         - charts/garden-kube-apiserver
