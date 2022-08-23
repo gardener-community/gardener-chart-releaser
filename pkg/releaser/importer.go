@@ -3,6 +3,7 @@ package releaser
 import (
 	"context"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"os"
 	"os/exec"
 	"strings"
@@ -11,7 +12,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/google/go-github/v36/github"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	"github.com/tomwright/dasel"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 )
@@ -45,13 +46,16 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 	if err != nil {
 		fmt.Println(err)
 	}
-	os.RemoveAll(tempDir)
+	err = os.RemoveAll(tempDir)
+	if err != nil {
+		logrus.Error(err)
+	}
 	resultChart.Metadata.Version = cfg.Version
 
 	return *resultChart
 }
 
-func ensureChart(c *chart.Chart) {
+func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 
 	c.Metadata.APIVersion = "v2"
 	if len(c.Dependencies()) == 0 {
@@ -59,28 +63,57 @@ func ensureChart(c *chart.Chart) {
 	}
 
 	for _, dep := range c.Dependencies() {
-		cur_dep := chart.Dependency{
+		curDep := chart.Dependency{
 			Name:      dep.Name(),
 			Condition: dep.Name() + ".enabled",
 			Enabled:   false,
 		}
-		c.Metadata.Dependencies = append(c.Metadata.Dependencies, &cur_dep)
+		c.Metadata.Dependencies = append(c.Metadata.Dependencies, &curDep)
 
 		if c.Values == nil {
 			c.Values = make(map[string]interface{})
 		}
 		c.Values[dep.Name()] = map[string]bool{"enabled": false}
 
-		values_serialized, _ := yaml.Marshal(c.Values)
+		rootNode := dasel.New(c.Values)
+
+		// If we are dealing with gardenlet or gardener-core charts we have to set the image tags manually
+		if cfg.Name == "gardenlet" {
+			err := rootNode.Put("global.gardenlet.image.tag", cfg.Version)
+			if err != nil {
+				logrus.Error(err)
+			}
+		}
+		if cfg.Name == "gardener-controlplane" {
+			err := rootNode.Put("global.apiserver.image.tag", cfg.Version)
+			if err != nil {
+				logrus.Error(err)
+			}
+			err = rootNode.Put("global.admission.image.tag", cfg.Version)
+			if err != nil {
+				logrus.Error(err)
+			}
+			err = rootNode.Put("global.controller.image.tag", cfg.Version)
+			if err != nil {
+				logrus.Error(err)
+			}
+			err = rootNode.Put("global.scheduler.image.tag", cfg.Version)
+			if err != nil {
+				logrus.Error(err)
+			}
+		}
+		valuesSerialized, err := yaml.Marshal(rootNode.OriginalValue)
+		if err != nil {
+			logrus.Error(err)
+		}
 		c.Raw = []*chart.File{{
 			Name: "values.yaml",
-			Data: values_serialized,
+			Data: valuesSerialized,
 		}}
 
-		ensureChart(dep)
+		ensureChart(dep, cfg)
 	}
 }
-
 
 func writeReleaseNotes(cfg SrcConfiguration, client *github.Client) *chart.File {
 	rr, _, _ := client.Repositories.GetReleaseByTag(context.Background(), strings.Split(cfg.Repo, "/")[0], strings.Split(cfg.Repo, "/")[1], cfg.Version)
@@ -91,7 +124,6 @@ func writeReleaseNotes(cfg SrcConfiguration, client *github.Client) *chart.File 
 	}
 	return file
 }
-
 
 func getTopLevelChart(cfg SrcConfiguration, client *github.Client) chart.Chart {
 
@@ -137,6 +169,6 @@ func getTopLevelChart(cfg SrcConfiguration, client *github.Client) chart.Chart {
 	// ensureChart makes sure that the chart dependencies are set correctly
 	mainChart.Metadata.Name = cfg.Name
 	mainChart.Files = append(mainChart.Files, writeReleaseNotes(cfg, client))
-	ensureChart(&mainChart)
+	ensureChart(&mainChart, cfg)
 	return mainChart
 }
