@@ -6,6 +6,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -69,6 +70,10 @@ func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 			Enabled:   false,
 		}
 		c.Metadata.Dependencies = append(c.Metadata.Dependencies, &curDep)
+
+		// helmcharts are versioned with strict semver (no v-Prefix)
+		re := regexp.MustCompile(`^v`)
+		c.Metadata.Version = string(re.ReplaceAll([]byte(cfg.Version), []byte("")))
 
 		if c.Values == nil {
 			c.Values = make(map[string]interface{})
