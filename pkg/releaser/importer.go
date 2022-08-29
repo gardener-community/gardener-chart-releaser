@@ -59,6 +59,29 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 
 	c.Metadata.APIVersion = "v2"
+	if cfg.Name == "dashboard" {
+		if c.Values == nil {
+			c.Values = make(map[string]interface{})
+		}
+		c.Values[c.Name()] = map[string]bool{"enabled": false}
+
+		rootNode := dasel.New(c.Values)
+
+		err := rootNode.Put("image.tag", cfg.Version)
+		if err != nil {
+			logrus.Error(err)
+		}
+
+		valuesSerialized, err := yaml.Marshal(rootNode.OriginalValue)
+		if err != nil {
+			logrus.Error(err)
+		}
+		c.Raw = []*chart.File{{
+			Name: "values.yaml",
+			Data: valuesSerialized,
+		}}
+	}
+
 	if len(c.Dependencies()) == 0 {
 		return
 	}
@@ -85,12 +108,6 @@ func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 		// If we are dealing with gardenlet or gardener-core charts we have to set the image tags manually
 		if cfg.Name == "gardenlet" {
 			err := rootNode.Put("global.gardenlet.image.tag", cfg.Version)
-			if err != nil {
-				logrus.Error(err)
-			}
-		}
-		if cfg.Name == "dashboard" {
-			err := rootNode.Put("image.tag", cfg.Version)
 			if err != nil {
 				logrus.Error(err)
 			}
