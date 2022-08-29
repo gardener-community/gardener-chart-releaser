@@ -89,6 +89,12 @@ func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 				logrus.Error(err)
 			}
 		}
+		if cfg.Name == "dashboard" {
+			err := rootNode.Put("image.tag", cfg.Version)
+			if err != nil {
+				logrus.Error(err)
+			}
+		}
 		if cfg.Name == "gardener-controlplane" {
 			err := rootNode.Put("global.apiserver.image.tag", cfg.Version)
 			if err != nil {
