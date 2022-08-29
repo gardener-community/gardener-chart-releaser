@@ -59,6 +59,46 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 
 	c.Metadata.APIVersion = "v2"
+
+	rootNode := dasel.New(c.Values)
+	switch c.Name() {
+	case "dashboard":
+		err := rootNode.Put("image.tag", cfg.Version)
+		if err != nil {
+			logrus.Error(err)
+		}
+	case "gardenlet":
+		err := rootNode.Put("global.gardenlet.image.tag", cfg.Version)
+		if err != nil {
+			logrus.Error(err)
+		}
+	case "gardener-controlplane":
+		err := rootNode.Put("global.apiserver.image.tag", cfg.Version)
+		if err != nil {
+			logrus.Error(err)
+		}
+		err = rootNode.Put("global.admission.image.tag", cfg.Version)
+		if err != nil {
+			logrus.Error(err)
+		}
+		err = rootNode.Put("global.controller.image.tag", cfg.Version)
+		if err != nil {
+			logrus.Error(err)
+		}
+		err = rootNode.Put("global.scheduler.image.tag", cfg.Version)
+		if err != nil {
+			logrus.Error(err)
+		}
+	}
+	valuesSerialized, err := yaml.Marshal(rootNode.OriginalValue)
+	if err != nil {
+		logrus.Error(err)
+	}
+	c.Raw = []*chart.File{{
+		Name: "values.yaml",
+		Data: valuesSerialized,
+	}}
+
 	if len(c.Dependencies()) == 0 {
 		return
 	}
@@ -80,40 +120,7 @@ func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 		}
 		c.Values[dep.Name()] = map[string]bool{"enabled": false}
 
-		rootNode := dasel.New(c.Values)
-
-		// If we are dealing with gardenlet or gardener-core charts we have to set the image tags manually
-		if cfg.Name == "gardenlet" {
-			err := rootNode.Put("global.gardenlet.image.tag", cfg.Version)
-			if err != nil {
-				logrus.Error(err)
-			}
-		}
-		if cfg.Name == "dashboard" {
-			err := rootNode.Put("image.tag", cfg.Version)
-			if err != nil {
-				logrus.Error(err)
-			}
-		}
-		if cfg.Name == "gardener-controlplane" {
-			err := rootNode.Put("global.apiserver.image.tag", cfg.Version)
-			if err != nil {
-				logrus.Error(err)
-			}
-			err = rootNode.Put("global.admission.image.tag", cfg.Version)
-			if err != nil {
-				logrus.Error(err)
-			}
-			err = rootNode.Put("global.controller.image.tag", cfg.Version)
-			if err != nil {
-				logrus.Error(err)
-			}
-			err = rootNode.Put("global.scheduler.image.tag", cfg.Version)
-			if err != nil {
-				logrus.Error(err)
-			}
-		}
-		valuesSerialized, err := yaml.Marshal(rootNode.OriginalValue)
+		valuesSerialized, err := yaml.Marshal(c.Values)
 		if err != nil {
 			logrus.Error(err)
 		}
