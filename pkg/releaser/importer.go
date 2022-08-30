@@ -2,7 +2,6 @@ package releaser
 
 import (
 	"context"
-	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
 	"os/exec"
@@ -20,36 +19,45 @@ import (
 
 func importChart(cfg SrcConfiguration, src string) chart.Chart {
 
-	logrus.Info("Starting Chart import from ", cfg.Repo, " Version: ", cfg.Version)
-	tempRepoDir := "/tmp/" + cfg.Repo + "/"
-	_, err := git.PlainClone(tempRepoDir, false, &git.CloneOptions{
-		URL:           "https://github.com/" + cfg.Repo,
-		ReferenceName: plumbing.NewTagReferenceName(cfg.Version),
-		SingleBranch:  true,
-		Depth:         1,
-		Progress:      os.Stdout,
-	})
-	if err != nil {
-		fmt.Println(err)
-	}
-
 	// I did not find any package handling the symlinks to directories,
 	// so that the directories are copied over
 	// Therefore, just use a system command here
 	tempDir := "tmp"
+	tempRepoDir := "/tmp/" + cfg.Repo + "/"
+	logrus.Info("Git clone: ", cfg.Repo, " Version: ", cfg.Version, " tmp-dir: ", tempRepoDir)
+
+	_, err := exec.Command("rm","-rf", tempRepoDir).Output()
+	if err != nil {
+		logrus.Warn(err)
+	}
+	_, err = exec.Command("rm","-rf", tempDir).Output()
+	if err != nil {
+		logrus.Warn(err)
+	}
+
+	_, err = git.PlainClone(tempRepoDir, false, &git.CloneOptions{
+		URL:           "https://github.com/" + cfg.Repo,
+		ReferenceName: plumbing.NewTagReferenceName(cfg.Version),
+		SingleBranch:  true,
+		Depth:         1,
+		Progress:      nil,
+	})
+	if err != nil {
+		logrus.Warn(err)
+	}
 
 	_, err = exec.Command("cp", "-LR", tempRepoDir+src, tempDir).Output()
 	if err != nil {
-		fmt.Println(err)
+		logrus.Warn(err)
 	}
 
 	resultChart, err := loader.Load(tempDir)
 	if err != nil {
-		fmt.Println(err)
+		logrus.Warn(err)
 	}
 	err = os.RemoveAll(tempDir)
 	if err != nil {
-		logrus.Error(err)
+		logrus.Warn(err)
 	}
 	resultChart.Metadata.Version = cfg.Version
 
@@ -59,7 +67,7 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 
 	c.Metadata.APIVersion = "v2"
-	
+
 	// helmcharts are versioned with strict semver (no v-Prefix)
 	re := regexp.MustCompile(`^v`)
 	c.Metadata.Version = string(re.ReplaceAll([]byte(cfg.Version), []byte("")))
