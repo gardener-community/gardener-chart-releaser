@@ -49,6 +49,7 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 	for {
 		branch, err = b.Next()
 		if err != nil {
+			logrus.Error("I was not able to find a default branch, you should not rely on what I will do next")
 			break
 		}
 		if strings.Contains(string(branch.Name()), "master") || strings.Contains(string(branch.Name()), "main") {
