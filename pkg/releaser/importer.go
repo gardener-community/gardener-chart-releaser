@@ -24,23 +24,52 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 	// Therefore, just use a system command here
 	tempDir := "tmp"
 	tempRepoDir := "/tmp/" + cfg.Repo + "/"
-	logrus.Info("Git clone: ", cfg.Repo, " Version: ", cfg.Version, " tmp-dir: ", tempRepoDir)
+	logrus.Info("Git clone or pull: ", cfg.Repo, " Version: ", cfg.Version, " tmp-dir: ", tempRepoDir)
 
-	_, err := exec.Command("rm","-rf", tempRepoDir).Output()
-	if err != nil {
-		logrus.Warn(err)
-	}
-	_, err = exec.Command("rm","-rf", tempDir).Output()
+	_, err := exec.Command("rm","-rf", tempDir).Output()
 	if err != nil {
 		logrus.Warn(err)
 	}
 
-	_, err = git.PlainClone(tempRepoDir, false, &git.CloneOptions{
+	// Clone the repository or open it, if it already exists on disk
+	// It is handeled like this for performance reasons, when e.g. exporting the charts
+	repo, err := git.PlainClone(tempRepoDir, false, &git.CloneOptions{
 		URL:           "https://github.com/" + cfg.Repo,
-		ReferenceName: plumbing.NewTagReferenceName(cfg.Version),
-		SingleBranch:  true,
-		Depth:         1,
-		Progress:      nil,
+	})
+	if err == git.ErrRepositoryAlreadyExists {
+		repo, err = git.PlainOpen(tempRepoDir)
+	} else if err != nil {
+		logrus.Info(err)
+	}
+
+	// We want to checkout the "default" branch of our repo, so that a clean state is reached and we can pull
+	// Therefore, find out if the "default" branch is called "master" oder "main"
+	b, err := repo.Branches()
+	var branch *plumbing.Reference
+	for {
+		branch, err = b.Next()
+		if err != nil {
+			logrus.Error("I was not able to find a default branch, you should not rely on what I will do next")
+			break
+		}
+		if strings.Contains(string(branch.Name()), "master") || strings.Contains(string(branch.Name()), "main") {
+			break
+		}
+	}
+		
+	// checkout the default branch now and pull
+	wt, err := repo.Worktree()
+	wt.Checkout(&git.CheckoutOptions{
+		Branch: branch.Name(),
+	})
+	err = wt.Pull(&git.PullOptions{})
+	if err != nil {
+		logrus.Info(err)
+	}
+
+	// checkout the target-tag after pull
+	err = wt.Checkout(&git.CheckoutOptions{
+		Branch: plumbing.NewTagReferenceName(cfg.Version),
 	})
 	if err != nil {
 		logrus.Warn(err)
