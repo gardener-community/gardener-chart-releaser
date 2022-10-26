@@ -17,6 +17,7 @@ func fetchControllerRegistration(cfg SrcConfiguration) ([]byte, error) {
 	urls := [3]string{
 		"https://raw.githubusercontent.com/" + cfg.Repo + "/" + cfg.Version + "/examples/controller-registration.yaml",
 		"https://raw.githubusercontent.com/" + cfg.Repo + "/" + cfg.Version + "/example/controller-registration.yaml",
+		"https://raw.githubusercontent.com/" + cfg.Repo + "/" + cfg.Version + "/example/registration/controller-registration.yaml",
 		"https://github.com/" + cfg.Repo + "/releases/download/" + cfg.Version + "/controller-registration.yaml",
 	}
 
