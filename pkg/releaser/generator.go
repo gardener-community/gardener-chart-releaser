@@ -14,7 +14,7 @@ import (
 
 func fetchControllerRegistration(cfg SrcConfiguration) ([]byte, error) {
 	var controller_registration []byte
-	urls := [3]string{
+	urls := [4]string{
 		"https://raw.githubusercontent.com/" + cfg.Repo + "/" + cfg.Version + "/examples/controller-registration.yaml",
 		"https://raw.githubusercontent.com/" + cfg.Repo + "/" + cfg.Version + "/example/controller-registration.yaml",
 		"https://raw.githubusercontent.com/" + cfg.Repo + "/" + cfg.Version + "/example/registration/controller-registration.yaml",
