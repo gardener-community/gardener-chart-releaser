@@ -2,6 +2,7 @@ package releaser
 
 import (
 	"context"
+	"github.com/Masterminds/semver/v3"
 	"gopkg.in/yaml.v3"
 	"os"
 	"os/exec"
@@ -26,7 +27,7 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 	tempRepoDir := "/tmp/" + cfg.Repo + "/"
 	logrus.Info("Git clone or pull: ", cfg.Repo, " Version: ", cfg.Version, " tmp-dir: ", tempRepoDir)
 
-	_, err := exec.Command("rm","-rf", tempDir).Output()
+	_, err := exec.Command("rm", "-rf", tempDir).Output()
 	if err != nil {
 		logrus.Warn(err)
 	}
@@ -34,7 +35,7 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 	// Clone the repository or open it, if it already exists on disk
 	// It is handeled like this for performance reasons, when e.g. exporting the charts
 	repo, err := git.PlainClone(tempRepoDir, false, &git.CloneOptions{
-		URL:           "https://github.com/" + cfg.Repo,
+		URL: "https://github.com/" + cfg.Repo,
 	})
 	if err == git.ErrRepositoryAlreadyExists {
 		repo, err = git.PlainOpen(tempRepoDir)
@@ -48,6 +49,7 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 	var branch *plumbing.Reference
 	for {
 		branch, err = b.Next()
+		logrus.Debug(branch.String())
 		if err != nil {
 			logrus.Error("I was not able to find a default branch, you should not rely on what I will do next")
 			break
@@ -56,7 +58,7 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 			break
 		}
 	}
-		
+
 	// checkout the default branch now and pull
 	wt, err := repo.Worktree()
 	wt.Checkout(&git.CheckoutOptions{
@@ -104,14 +106,50 @@ func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 	rootNode := dasel.New(c.Values)
 	switch c.Name() {
 	case "dashboard":
-		err := rootNode.Put("image.tag", cfg.Version)
+		myver, err := semver.NewVersion(cfg.Version)
 		if err != nil {
 			logrus.Error(err)
 		}
-	case "gardenlet":
-		err := rootNode.Put("global.gardenlet.image.tag", cfg.Version)
+		//	Starting with Dashboard version v1.59.0 the image and its tag version moved from image.tag to
+		//	global.image.tag. The upstream release note can be found here:
+		//	https://github.com/gardener/dashboard/pull/1283
+		dashboardValuesSwitchVersion, err := semver.NewVersion("v1.62.0")
 		if err != nil {
 			logrus.Error(err)
+		}
+		if myver.LessThan(dashboardValuesSwitchVersion) {
+			err := rootNode.Put("image.tag", cfg.Version)
+			if err != nil {
+				logrus.Error(err)
+			}
+		} else {
+			err := rootNode.Put("global.image.tag", cfg.Version)
+			if err != nil {
+				logrus.Error(err)
+			}
+		}
+	case "gardenlet":
+		myver, err := semver.NewVersion(cfg.Version)
+		if err != nil {
+			logrus.Error(err)
+		}
+		//	Starting with gardenlet version v1.59.0 the image and its tag version moved from global.gardenlet.image.tag
+		//	to image.tag. The upstream release note can be found here:
+		//	https://github.com/gardener/gardener/pull/6876
+		gardenletValuesSwitchVersion, err := semver.NewVersion("v1.59.0")
+		if err != nil {
+			logrus.Error(err)
+		}
+		if myver.LessThan(gardenletValuesSwitchVersion) {
+			err := rootNode.Put("global.gardenlet.image.tag", cfg.Version)
+			if err != nil {
+				logrus.Error(err)
+			}
+		} else {
+			err := rootNode.Put("image.tag", cfg.Version)
+			if err != nil {
+				logrus.Error(err)
+			}
 		}
 	case "gardener-controlplane":
 		err := rootNode.Put("global.apiserver.image.tag", cfg.Version)
@@ -171,7 +209,10 @@ func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 }
 
 func writeReleaseNotes(cfg SrcConfiguration, client *github.Client) *chart.File {
-	rr, _, _ := client.Repositories.GetReleaseByTag(context.Background(), strings.Split(cfg.Repo, "/")[0], strings.Split(cfg.Repo, "/")[1], cfg.Version)
+	rr, _, err := client.Repositories.GetReleaseByTag(context.Background(), strings.Split(cfg.Repo, "/")[0], strings.Split(cfg.Repo, "/")[1], cfg.Version)
+	if err != nil {
+		logrus.Error(err)
+	}
 
 	file := &chart.File{
 		Name: "RELEASE.md",
