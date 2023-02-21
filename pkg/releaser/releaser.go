@@ -69,8 +69,12 @@ func UpdateReleases(config Configuration, targetDir string, ghToken string)  {
 		versionsToRelease, _ := getReleasesToTrack(cfg, config.DstCfg, client)
 		for _, v := range versionsToRelease {
 			cfg.Version = v.Original()
-			topLevelChart := getTopLevelChart(cfg, client)
-			chartutil.Save(&topLevelChart, targetDir)
+			topLevelChart, err := getTopLevelChart(cfg, client)
+			if err != nil {
+				logrus.Warn("Did not save chart due to error", err)
+			} else {
+				chartutil.Save(&topLevelChart, targetDir)
+			}
 		}
 	}
 
@@ -120,8 +124,12 @@ func ExportCharts(config Configuration, targetDir string, ghToken string)  {
 
 	// main loop over all items in the config file
 	for _, cfg := range config.SrcCfg {
-			topLevelChart := getTopLevelChart(cfg, client)
+			topLevelChart, err := getTopLevelChart(cfg, client)
+		if err != nil {
+			logrus.Warn("Did not save chart due to error", err)
+		} else {
 			chartutil.SaveDir(&topLevelChart, targetDir)
+		}
 	}
 
 }
