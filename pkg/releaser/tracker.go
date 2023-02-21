@@ -44,8 +44,8 @@ func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *gith
 
 	// As we release all charts in the 23ke-charts repo, we need to list way more releases.
 	// Let's take the last 300 for now
-	ourReleases := make([]*github.RepositoryRelease, 300)
-	for i := 1; i <= 3; i++ {
+	ourReleases := make([]*github.RepositoryRelease, 10000)
+	for i := 1; i <= 100; i++ {
 		pageReleases, _, _ := client.Repositories.ListReleases(context.Background(),
 			dst.Owner,
 			dst.Repo,
