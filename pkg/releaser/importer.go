@@ -18,7 +18,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 )
 
-func importChart(cfg SrcConfiguration, src string) chart.Chart {
+func importChart(cfg SrcConfiguration, src string) (chart.Chart, error) {
 
 	// I did not find any package handling the symlinks to directories,
 	// so that the directories are copied over
@@ -85,6 +85,7 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 	resultChart, err := loader.Load(tempDir)
 	if err != nil {
 		logrus.Warn(err)
+		return chart.Chart{}, err
 	}
 	err = os.RemoveAll(tempDir)
 	if err != nil {
@@ -92,7 +93,7 @@ func importChart(cfg SrcConfiguration, src string) chart.Chart {
 	}
 	resultChart.Metadata.Version = cfg.Version
 
-	return *resultChart
+	return *resultChart, nil
 }
 
 func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
@@ -221,7 +222,7 @@ func writeReleaseNotes(cfg SrcConfiguration, client *github.Client) *chart.File 
 	return file
 }
 
-func getTopLevelChart(cfg SrcConfiguration, client *github.Client) chart.Chart {
+func getTopLevelChart(cfg SrcConfiguration, client *github.Client) (chart.Chart, error) {
 
 	var mainChart chart.Chart
 
@@ -235,6 +236,7 @@ func getTopLevelChart(cfg SrcConfiguration, client *github.Client) chart.Chart {
 		break
 	}
 
+	var err error
 	if generateNewChart {
 		mainChart = chart.Chart{
 			Metadata: &chart.Metadata{
@@ -252,19 +254,25 @@ func getTopLevelChart(cfg SrcConfiguration, client *github.Client) chart.Chart {
 			if src == "controller-registration" {
 				*subChart = generateExtensionChart(cfg)
 			} else {
-				*subChart = importChart(cfg, src)
+				*subChart, err = importChart(cfg, src)
+				if err != nil {
+					continue
+				}
 			}
 			mainChart.AddDependency(subChart)
 		}
 
 	} else {
 		// here we assume that the chart is already packaged appropriately by upstream
-		mainChart = importChart(cfg, cfg.Charts[0])
+		mainChart, err = importChart(cfg, cfg.Charts[0])
+		if err != nil {
+			return chart.Chart{}, err
+		}
 	}
 
 	// ensureChart makes sure that the chart dependencies are set correctly
 	mainChart.Metadata.Name = cfg.Name
 	mainChart.Files = append(mainChart.Files, writeReleaseNotes(cfg, client))
 	ensureChart(&mainChart, cfg)
-	return mainChart
+	return mainChart, nil
 }
