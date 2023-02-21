@@ -16,13 +16,15 @@ func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *gith
 	owner := strings.Split(cfg.Repo, "/")[0]
 	repo := strings.Split(cfg.Repo, "/")[1]
 
-	// most probably the last 20 upstreamReleases will contain everything we need
+	// most probably the last 40 upstreamReleases will contain everything we need
+	// assuming that we do not have more than 10 patch releaeses in 4 consecutive
+	// minor tracks
 	upstreamReleases, _, err := client.Repositories.ListReleases(context.Background(),
 		owner,
 		repo,
 		&github.ListOptions{
 			Page:    0,
-			PerPage: 20,
+			PerPage: 40,
 		})
 
 	if err != nil {
@@ -39,35 +41,6 @@ func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *gith
 	}
 	sort.Sort(semver.Collection(upstreamReleaseVersions))
 
-	// We want to track all releases which are not older than the maximum minor
-	// version minus 3. This rule should hold for all major versions, so that we
-	// track all major versions in parallel.
-	prevMajor := upstreamReleaseVersions[len(upstreamReleaseVersions)-1].Major()
-	curMaxMinor := upstreamReleaseVersions[len(upstreamReleaseVersions)-1].Minor()
-	releaseVersionsInTrackingRange := make([]*semver.Version, 0)
-	for i := len(upstreamReleaseVersions) - 1; i >= 0; i-- {
-		curMajor := upstreamReleaseVersions[i].Major()
-
-		// if we find a step in the major version, determine the new maxmimum minor version
-		if prevMajor != curMajor {
-			curMaxMinor = upstreamReleaseVersions[i].Minor()
-			prevMajor = curMajor
-		}
-
-		var maxMinorMinus3 uint64
-		if curMaxMinor <= 3 {
-			maxMinorMinus3 = 0
-		} else {
-			maxMinorMinus3 = curMaxMinor - 3
-		}
-
-		if upstreamReleaseVersions[i].Minor() >= maxMinorMinus3 {
-			releaseVersionsInTrackingRange = append(releaseVersionsInTrackingRange, upstreamReleaseVersions[i])
-		}
-
-	}
-
-	upstreamReleaseVersions = releaseVersionsInTrackingRange
 
 	// As we release all charts in the 23ke-charts repo, we need to list way more releases.
 	// Let's take the last 300 for now
