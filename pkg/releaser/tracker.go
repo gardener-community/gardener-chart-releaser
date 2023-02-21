@@ -39,15 +39,31 @@ func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *gith
 	}
 	sort.Sort(semver.Collection(upstreamReleaseVersions))
 
-	maxMinor := upstreamReleaseVersions[len(upstreamReleaseVersions)-1].Minor()
-	var maxMinorMinus3 uint64
-	if maxMinor <= 3 {
-		maxMinorMinus3 = 0
-	} else {
-		maxMinorMinus3 = maxMinor - 3
+	prevMajor := upstreamReleaseVersions[len(upstreamReleaseVersions)-1].Major()
+	curMaxMinor := upstreamReleaseVersions[len(upstreamReleaseVersions)-1].Minor()
+	output := make([]*semver.Version, 0)
+	for i := len(upstreamReleaseVersions) - 1; i >= 0; i-- {
+		curMajor := upstreamReleaseVersions[i].Major()
+
+		if prevMajor != curMajor {
+			curMaxMinor = upstreamReleaseVersions[i].Minor()
+			prevMajor = curMajor
+		}
+
+		var maxMinorMinus3 uint64
+		if curMaxMinor <= 3 {
+			maxMinorMinus3 = 0
+		} else {
+			maxMinorMinus3 = curMaxMinor - 3
+		}
+
+		if upstreamReleaseVersions[i].Minor() >= maxMinorMinus3 {
+			output = append(upstreamReleaseVersions, upstreamReleaseVersions[i])
+		}
+
 	}
 
-	upstreamReleaseVersions = slice.Filter(upstreamReleaseVersions, (func(v *semver.Version) bool { return v.Minor() >= maxMinorMinus3 }))
+	upstreamReleaseVersions = output
 
 	// As we release all charts in the 23ke-charts repo, we need to list way more releases.
 	// Let's take the last 300 for now
