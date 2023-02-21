@@ -16,13 +16,15 @@ func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *gith
 	owner := strings.Split(cfg.Repo, "/")[0]
 	repo := strings.Split(cfg.Repo, "/")[1]
 
-	// most probably the last 20 upstreamReleases will contain everything we need
+	// most probably the last 40 upstreamReleases will contain everything we need
+	// assuming that we do not have more than 10 patch releaeses in 4 consecutive
+	// minor tracks
 	upstreamReleases, _, err := client.Repositories.ListReleases(context.Background(),
 		owner,
 		repo,
 		&github.ListOptions{
 			Page:    0,
-			PerPage: 20,
+			PerPage: 40,
 		})
 
 	if err != nil {
@@ -39,15 +41,6 @@ func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *gith
 	}
 	sort.Sort(semver.Collection(upstreamReleaseVersions))
 
-	maxMinor := upstreamReleaseVersions[len(upstreamReleaseVersions)-1].Minor()
-	var maxMinorMinus3 uint64
-	if maxMinor <= 3 {
-		maxMinorMinus3 = 0
-	} else {
-		maxMinorMinus3 = maxMinor - 3
-	}
-
-	upstreamReleaseVersions = slice.Filter(upstreamReleaseVersions, (func(v *semver.Version) bool { return v.Minor() >= maxMinorMinus3 }))
 
 	// As we release all charts in the 23ke-charts repo, we need to list way more releases.
 	// Let's take the last 300 for now
