@@ -16,15 +16,15 @@ func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *gith
 	owner := strings.Split(cfg.Repo, "/")[0]
 	repo := strings.Split(cfg.Repo, "/")[1]
 
-	// most probably the last 40 upstreamReleases will contain everything we need
-	// assuming that we do not have more than 10 patch releaeses in 4 consecutive
+	// most probably the last 20 upstreamReleases will contain everything we need
+	// assuming that we do not have more than 5 patch releaeses in 4 consecutive
 	// minor tracks
 	upstreamReleases, _, err := client.Repositories.ListReleases(context.Background(),
 		owner,
 		repo,
 		&github.ListOptions{
 			Page:    0,
-			PerPage: 40,
+			PerPage: 20,
 		})
 
 	if err != nil {
