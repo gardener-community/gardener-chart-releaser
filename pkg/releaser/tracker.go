@@ -39,12 +39,16 @@ func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *gith
 	}
 	sort.Sort(semver.Collection(upstreamReleaseVersions))
 
+	// We want to track all releases which are not older than the maximum minor
+	// version minus 3. This rule should hold for all major versions, so that we
+	// track all major versions in parallel.
 	prevMajor := upstreamReleaseVersions[len(upstreamReleaseVersions)-1].Major()
 	curMaxMinor := upstreamReleaseVersions[len(upstreamReleaseVersions)-1].Minor()
-	output := make([]*semver.Version, 0)
+	releaseVersionsInTrackingRange := make([]*semver.Version, 0)
 	for i := len(upstreamReleaseVersions) - 1; i >= 0; i-- {
 		curMajor := upstreamReleaseVersions[i].Major()
 
+		// if we find a step in the major version, determine the new maxmimum minor version
 		if prevMajor != curMajor {
 			curMaxMinor = upstreamReleaseVersions[i].Minor()
 			prevMajor = curMajor
@@ -58,12 +62,12 @@ func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *gith
 		}
 
 		if upstreamReleaseVersions[i].Minor() >= maxMinorMinus3 {
-			output = append(upstreamReleaseVersions, upstreamReleaseVersions[i])
+			releaseVersionsInTrackingRange = append(releaseVersionsInTrackingRange, upstreamReleaseVersions[i])
 		}
 
 	}
 
-	upstreamReleaseVersions = output
+	upstreamReleaseVersions = releaseVersionsInTrackingRange
 
 	// As we release all charts in the 23ke-charts repo, we need to list way more releases.
 	// Let's take the last 300 for now
