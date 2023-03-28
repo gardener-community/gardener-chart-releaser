@@ -212,7 +212,15 @@ func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 func writeReleaseNotes(cfg SrcConfiguration, client *github.Client) *chart.File {
 	rr, _, err := client.Repositories.GetReleaseByTag(context.Background(), strings.Split(cfg.Repo, "/")[0], strings.Split(cfg.Repo, "/")[1], cfg.Version)
 	if err != nil {
+		if strings.Contains(err.Error(), "Bad credentials") {
+			logrus.Error(err)
+			os.Exit(1)
+		}
 		logrus.Error(err)
+	}
+	if rr == nil {
+		logrus.Error("Error: Received empty GitHub Release for ", cfg.Repo)
+		os.Exit(1)
 	}
 
 	file := &chart.File{
