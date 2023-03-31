@@ -2,12 +2,13 @@ package releaser
 
 import (
 	"context"
-	"github.com/Masterminds/semver/v3"
-	"gopkg.in/yaml.v3"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	"gopkg.in/yaml.v3"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -166,6 +167,11 @@ func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 			logrus.Error(err)
 		}
 		err = rootNode.Put("global.scheduler.image.tag", cfg.Version)
+		if err != nil {
+			logrus.Error(err)
+		}
+	case "gardener-metrics-exporter":
+		err := rootNode.Put("global.image.tag", cfg.Version)
 		if err != nil {
 			logrus.Error(err)
 		}
