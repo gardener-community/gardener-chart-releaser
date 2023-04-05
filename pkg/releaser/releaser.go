@@ -2,14 +2,14 @@ package releaser
 
 import (
 	"context"
-	"os/exec"
-	"strings"
-
-	git "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5"
 	"github.com/google/go-github/v36/github"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 	"helm.sh/helm/v3/pkg/chartutil"
+	"os"
+	"path"
+	"strings"
 
 	chartreleaserconfig "github.com/helm/chart-releaser/pkg/config"
 	chartreleasergit "github.com/helm/chart-releaser/pkg/git"
@@ -17,18 +17,16 @@ import (
 	chartreleaser "github.com/helm/chart-releaser/pkg/releaser"
 )
 
-// UpdateReleases ...
-func UpdateReleases(config Configuration, targetDir string, ghToken string)  {
+func UpdateReleases(config Configuration, targetDir string, ghToken string) {
+	cwd, _ := os.Getwd()
 
-	// For updating the index.yaml on gh-pages, we need to run this in a corresponding gitrepo
-	// Therefore, clone the destination repo and copy the .git folder to the current working dir
+	destRepo := path.Join(cwd, "destrepo")
+	_ = os.MkdirAll(destRepo, 0700)
+	defer os.RemoveAll(destRepo)
 
-	// make sure to start in a clean state
-	exec.Command("rm", "-rf", "destrepo").Run()
-	exec.Command("rm", "-rf", ".git").Run()
 	logrus.Info("Cloning destrepo ", config.DstCfg.Owner, "/", config.DstCfg.Repo)
-	repo, err := git.PlainClone("destrepo", false, &git.CloneOptions{
-		URL: "https://github.com/" + config.DstCfg.Owner + "/" + config.DstCfg.Repo,
+	repo, err := git.PlainClone(destRepo, false, &git.CloneOptions{
+		URL:          "https://github.com/" + config.DstCfg.Owner + "/" + config.DstCfg.Repo,
 		SingleBranch: false,
 	})
 	if err != nil {
@@ -41,7 +39,7 @@ func UpdateReleases(config Configuration, targetDir string, ghToken string)  {
 	remote, _ := repo.Remote("origin")
 	rfs, _ := remote.List(&git.ListOptions{})
 	ghPagesExists := false
-	for _, r := range(rfs) {
+	for _, r := range rfs {
 		if strings.Contains(string(r.Name()), "gh-pages") {
 			ghPagesExists = true
 			break
@@ -51,10 +49,6 @@ func UpdateReleases(config Configuration, targetDir string, ghToken string)  {
 		logrus.Error("I cannot go on, as the gh-pages branch is not existing in your destination repo: ", err)
 		return
 	}
-
-	// make sure the working dir is a git repository
-	exec.Command("cp", "-R", "destrepo/.git", "./").Run()
-
 
 	// get a *github.Client	for the github token
 	// this client will be used for interacting with the github api
@@ -83,11 +77,11 @@ func UpdateReleases(config Configuration, targetDir string, ghToken string)  {
 		Owner:               config.DstCfg.Owner,
 		GitRepo:             config.DstCfg.Repo,
 		ChartsRepo:          config.DstCfg.Repo,
-		IndexPath:           "destrepo/index.yaml",
+		IndexPath:           path.Join(destRepo, "index.yaml"),
 		PagesIndexPath:      "index.yaml",
 		PagesBranch:         "gh-pages",
 		Remote:              "origin",
-		PackagePath:         targetDir,
+		PackagePath:         path.Join(cwd, targetDir),
 		Sign:                false,
 		Token:               ghToken,
 		Commit:              "",
@@ -102,17 +96,18 @@ func UpdateReleases(config Configuration, targetDir string, ghToken string)  {
 	gh := chartreleasergithub.NewClient(chartrelcfg.Owner, chartrelcfg.GitRepo, ghToken, "https://api.github.com/", "https://uploads.github.com/")
 	releaser := chartreleaser.NewReleaser(&chartrelcfg, gh, &chartreleasergit.Git{})
 
+	logrus.Info("Creating releases")
 	err = releaser.CreateReleases()
+
+	logrus.Info("Updating index")
+	// chart-releaser assumes its working directory is the destination repo
+	os.Chdir(destRepo)
 	_, err = releaser.UpdateIndexFile()
-
-	// cleanup
-	exec.Command("rm", "-rf", "destrepo").Run()
-	exec.Command("rm", "-rf", ".git").Run()
-
+	os.Chdir(cwd)
 }
 
 // ExportCharts Exports the configured charts to a directory
-func ExportCharts(config Configuration, targetDir string, ghToken string)  {
+func ExportCharts(config Configuration, targetDir string, ghToken string) {
 
 	// get a *github.Client	for the github token
 	// this client will be used for interacting with the github api
@@ -124,7 +119,7 @@ func ExportCharts(config Configuration, targetDir string, ghToken string)  {
 
 	// main loop over all items in the config file
 	for _, cfg := range config.SrcCfg {
-			topLevelChart, err := getTopLevelChart(cfg, client)
+		topLevelChart, err := getTopLevelChart(cfg, client)
 		if err != nil {
 			logrus.Warn("Did not save chart due to error", err)
 		} else {
