@@ -62,9 +62,17 @@ func importChart(cfg SrcConfiguration, src string) (chart.Chart, error) {
 
 	// checkout the default branch now and pull
 	wt, err := repo.Worktree()
+
 	wt.Checkout(&git.CheckoutOptions{
 		Branch: branch.Name(),
 	})
+	if err != nil {
+		logrus.Info(err)
+	}
+	err = wt.Reset(&git.ResetOptions{Mode: git.HardReset})
+	if err != nil {
+		logrus.Info(err)
+	}
 	err = wt.Pull(&git.PullOptions{})
 	if err != nil {
 		logrus.Info(err)
@@ -76,6 +84,10 @@ func importChart(cfg SrcConfiguration, src string) (chart.Chart, error) {
 	})
 	if err != nil {
 		logrus.Warn(err)
+	}
+	err = wt.Reset(&git.ResetOptions{Mode: git.HardReset})
+	if err != nil {
+		logrus.Info(err)
 	}
 
 	_, err = exec.Command("cp", "-LR", tempRepoDir+src, tempDir).Output()
