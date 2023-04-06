@@ -2,6 +2,8 @@ package releaser
 
 import (
 	"context"
+	"gopkg.in/yaml.v3"
+	"os"
 	"sort"
 	"strings"
 
@@ -11,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *github.Client) ([]*semver.Version, error) {
+func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *github.Client, indexYamlPath string) ([]*semver.Version, error) {
 
 	owner := strings.Split(cfg.Repo, "/")[0]
 	repo := strings.Split(cfg.Repo, "/")[1]
@@ -41,40 +43,47 @@ func getReleasesToTrack(cfg SrcConfiguration, dst DstConfiguration, client *gith
 	}
 	sort.Sort(semver.Collection(upstreamReleaseVersions))
 
-
-	// As we release all charts in the 23ke-charts repo, we need to list way more releases.
-	// Let's take the last 500 for now
-	ourReleases := make([]*github.RepositoryRelease, 500)
-	for i := 1; i <= 5; i++ {
-		pageReleases, _, _ := client.Repositories.ListReleases(context.Background(),
-			dst.Owner,
-			dst.Repo,
-			&github.ListOptions{
-				Page:    i,
-				PerPage: 100,
-			})
-		ourReleases = append(ourReleases, pageReleases...)
+	index := make(map[string]any)
+	err = readYamlFile(indexYamlPath, index)
+	if err != nil {
+		return nil, err
 	}
 
-	ourReleases = slice.Filter(ourReleases, (func(r *github.RepositoryRelease) bool {
-		return strings.Contains(r.GetName(), cfg.Name)
-	}))
+	entries := index["entries"].(map[string]any)[cfg.Name].([]any)
+	ourReleaseVersions := slice.Map(entries, func(e any) *semver.Version {
+		eMap := e.(map[string]any)
 
-	ourReleaseVersions := slice.Map(ourReleases, func(r *github.RepositoryRelease) *semver.Version {
-		vAsStringSlice := strings.Split(r.GetTagName(), "-")
-		v, _ := semver.NewVersion(vAsStringSlice[len(vAsStringSlice)-1])
-		return v
+		versionString := eMap["version"].(string)
+		version, err := semver.NewVersion(versionString)
+		if err != nil {
+			logrus.Warn(err)
+		}
+		return version
 	})
 
 	// Now, filter out all version we have on our side.
 	// If upstreamReleaseVersions is not empty afterwards,
 	// we need to generate releases for these versions
 	for _, ver := range ourReleaseVersions {
-		upstreamReleaseVersions = slice.Filter(upstreamReleaseVersions, (func(v *semver.Version) bool {
+		upstreamReleaseVersions = slice.Filter(upstreamReleaseVersions, func(v *semver.Version) bool {
 			return !v.Equal(ver)
-		}))
+		})
 	}
 
 	return upstreamReleaseVersions, nil
 
+}
+
+func readYamlFile(path string, out any) error {
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	err = yaml.Unmarshal(bytes, out)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
