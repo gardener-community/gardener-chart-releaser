@@ -7,14 +7,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"gopkg.in/yaml.v3"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/google/go-github/v36/github"
 	"github.com/sirupsen/logrus"
-	"github.com/tomwright/dasel"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 )
@@ -117,78 +115,11 @@ func ensureChart(c *chart.Chart, cfg SrcConfiguration) {
 	re := regexp.MustCompile(`^v`)
 	c.Metadata.Version = string(re.ReplaceAll([]byte(cfg.Version), []byte("")))
 
-	rootNode := dasel.New(c.Values)
-	switch c.Name() {
-	case "dashboard":
-		myver, err := semver.NewVersion(cfg.Version)
-		if err != nil {
-			logrus.Error(err)
-		}
-		//	Starting with Dashboard version v1.59.0 the image and its tag version moved from image.tag to
-		//	global.image.tag. The upstream release note can be found here:
-		//	https://github.com/gardener/dashboard/pull/1283
-		dashboardValuesSwitchVersion, err := semver.NewVersion("v1.62.0")
-		if err != nil {
-			logrus.Error(err)
-		}
-		if myver.LessThan(dashboardValuesSwitchVersion) {
-			err := rootNode.Put("image.tag", cfg.Version)
-			if err != nil {
-				logrus.Error(err)
-			}
-		} else {
-			err := rootNode.Put("global.image.tag", cfg.Version)
-			if err != nil {
-				logrus.Error(err)
-			}
-		}
-	case "gardenlet":
-		myver, err := semver.NewVersion(cfg.Version)
-		if err != nil {
-			logrus.Error(err)
-		}
-		//	Starting with gardenlet version v1.59.0 the image and its tag version moved from global.gardenlet.image.tag
-		//	to image.tag. The upstream release note can be found here:
-		//	https://github.com/gardener/gardener/pull/6876
-		gardenletValuesSwitchVersion, err := semver.NewVersion("v1.59.0")
-		if err != nil {
-			logrus.Error(err)
-		}
-		if myver.LessThan(gardenletValuesSwitchVersion) {
-			err := rootNode.Put("global.gardenlet.image.tag", cfg.Version)
-			if err != nil {
-				logrus.Error(err)
-			}
-		} else {
-			err := rootNode.Put("image.tag", cfg.Version)
-			if err != nil {
-				logrus.Error(err)
-			}
-		}
-	case "gardener-controlplane":
-		err := rootNode.Put("global.apiserver.image.tag", cfg.Version)
-		if err != nil {
-			logrus.Error(err)
-		}
-		err = rootNode.Put("global.admission.image.tag", cfg.Version)
-		if err != nil {
-			logrus.Error(err)
-		}
-		err = rootNode.Put("global.controller.image.tag", cfg.Version)
-		if err != nil {
-			logrus.Error(err)
-		}
-		err = rootNode.Put("global.scheduler.image.tag", cfg.Version)
-		if err != nil {
-			logrus.Error(err)
-		}
-	case "gardener-metrics-exporter":
-		err := rootNode.Put("global.image.tag", cfg.Version)
-		if err != nil {
-			logrus.Error(err)
-		}
-	}
-	valuesSerialized, err := yaml.Marshal(rootNode.OriginalValue)
+	valuesSerialized, err := yaml.Marshal(c.Values)
+	valuesSerialized = []byte(strings.Replace(string(valuesSerialized), "tag: latest", "tag: "+cfg.Version, -1))
+	c.Values = map[string]any{}
+	yaml.Unmarshal(valuesSerialized, c.Values)
+
 	if err != nil {
 		logrus.Error(err)
 	}
